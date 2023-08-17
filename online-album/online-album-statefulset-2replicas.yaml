@@ -1,0 +1,101 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: nfspv1
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - "ReadWriteMany"
+  storageClassName: nfs
+  nfs:
+    path: /var/nfs/online-album-static/static
+    server: harbor-slave3
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: nfspv2
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - "ReadWriteMany"
+  storageClassName: nfs
+  nfs:
+    path: /var/nfs/online-album-static/static
+    server: harbor-slave3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: online-album-svc-name
+  labels:
+    app: online-album-svc-label
+spec:
+  selector:
+    app: online-album-svc-selector
+  type: NodePort
+  ports:
+  - name: online-album-svc-port-name
+    port: 80
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: online-album-statefulset-name
+spec:
+  selector:
+    matchLabels:
+      app: online-album-statefulset-matchlabel
+  serviceName: "online-album-svc-name"
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: online-album-statefulset-matchlabel
+    spec:
+      containers:
+        - image: registry.k8s.com/k8s/mysql:5.7
+          name: mymysql-container
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              value: "166414"
+          lifecycle:
+            postStart:
+              exec:
+                command: ["sh","./post-start-mysql.sh"]
+          volumeMounts:
+            - name: online-album-statefulset-volume-name
+              mountPath: /static
+          workingDir: /static
+          command: ["sh","./start-mysql.sh"]
+        - image: registry.k8s.com/k8s/redis:5.0 
+          name: myredis-container
+          volumeMounts:
+            - name: online-album-statefulset-volume-name
+              mountPath: /static
+          workingDir: /static
+          command: ["sh","./start-redis.sh"]
+        - image: registry.k8s.com/k8s/maven:3.6.3-openjdk-8
+          name: mymaven-container
+          lifecycle:
+            postStart:
+              exec:
+                command: ["sh","./post-start-maven.sh"]
+          volumeMounts:
+            - name: online-album-statefulset-volume-name
+              mountPath: /static
+          workingDir: /static
+          command: ["sh","./start-maven.sh"]
+  volumeClaimTemplates:
+  - metadata:
+      name: online-album-statefulset-volume-name
+    spec:
+      accessModes: [ "ReadWriteMany" ]
+      storageClassName: "nfs"
+      resources:
+        requests:
+          storage: 1Gi
+

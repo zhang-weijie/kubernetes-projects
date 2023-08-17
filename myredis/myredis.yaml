@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myredis
+spec:
+  nodeName: slave1
+  containers:
+  - image: redis:5.0
+    name: myredis-container
+    lifecycle:
+      postStart:
+        exec:
+          command: ["sh","/static/start_redis.sh"]
+    volumeMounts:
+    - mountPath: /static
+      name: redis-static-resources
+  volumes:
+  - name: redis-static-resources
+    hostPath:
+      path: /export/data/k8s/online-album/online_album/static
+      type: Directory

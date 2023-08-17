@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mymysql
+spec:
+  nodeName: slave1
+  containers:
+  - image: registry.k8s.com/k8s/mysql:5.7
+    name: mymysql-container
+    env: 
+      - name: MYSQL_ROOT_PASSWORD
+        value: "166414"
+    lifecycle:
+      postStart:
+        exec:
+          command: ["sh","/static/start_mysql.sh"]
+    volumeMounts:
+    - mountPath: /static
+      name: mysql-static-resources
+  volumes:
+  - name: mysql-static-resources
+    hostPath:
+      path: /export/data/k8s/online-album/online_album/static
+      type: Directory
